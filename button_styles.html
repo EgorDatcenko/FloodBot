@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Стили кнопок для Telegram бота</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .telegram-button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Черные кнопки */
+        .black-button {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        
+        .black-button:hover {
+            background-color: #333333;
+        }
+        
+        /* Серые кнопки */
+        .gray-button {
+            background-color: #f0f0f0;
+            color: #000000;
+            border: 1px solid #ddd;
+        }
+        
+        .gray-button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* Цветные кнопки */
+        .blue-button {
+            background-color: #0088cc;
+            color: #ffffff;
+        }
+        
+        .blue-button:hover {
+            background-color: #006699;
+        }
+        
+        .green-button {
+            background-color: #28a745;
+            color: #ffffff;
+        }
+        
+        .green-button:hover {
+            background-color: #218838;
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Стили кнопок для Telegram бота</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Важно:</strong> В Telegram Bot API нельзя напрямую изменять цвет кнопок в меню пользователя. 
+            Это ограничение платформы Telegram.
+        </div>
+        
+        <div class="info">
+            <strong>💡 Решение:</strong> Можно использовать inline кнопки с кастомными стилями или 
+            создать веб-интерфейс для бота с собственными стилями.
+        </div>
+        
+        <h2>Примеры стилей кнопок:</h2>
+        
+        <div class="button-grid">
+            <button class="telegram-button black-button">🎯 ЧЕЛЛЕНДЖИ</button>
+            <button class="telegram-button black-button">💪 СИЛОВЫЕ</button>
+            <button class="telegram-button black-button">💡 СПОРТ СОВЕТЫ</button>
+            <button class="telegram-button black-button">😄 МЕМЫ</button>
+            <button class="telegram-button black-button">🏋️‍♂️ УПРАЖНЕНИЯ</button>
+            <button class="telegram-button black-button">🌊 ФЛУДЩИНА</button>
+            <button class="telegram-button black-button">📊 СТАТИСТИКА</button>
+            <button class="telegram-button black-button">🔍 ПОИСК</button>
+            <button class="telegram-button black-button">🔄 ЗАГРУЗИТЬ ПОСТЫ</button>
+            <button class="telegram-button black-button">❓ ПОМОЩЬ</button>
+        </div>
+        
+        <h2>Альтернативные стили:</h2>
+        
+        <div class="button-grid">
+            <button class="telegram-button gray-button">🎯 ЧЕЛЛЕНДЖИ</button>
+            <button class="telegram-button blue-button">💪 СИЛОВЫЕ</button>
+            <button class="telegram-button green-button">💡 СПОРТ СОВЕТЫ</button>
+            <button class="telegram-button gray-button">😄 МЕМЫ</button>
+        </div>
+        
+        <div class="info">
+            <strong>🔧 Для изменения цвета в Telegram:</strong>
+            <ul>
+                <li>Используйте inline кнопки вместо ReplyKeyboardMarkup</li>
+                <li>Создайте веб-интерфейс для бота</li>
+                <li>Используйте кастомные стили в веб-версии</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html> 
