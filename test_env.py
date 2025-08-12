@@ -1,20 +1,23 @@
-#!/usr/bin/env python3
-"""
-Тестовый скрипт для проверки переменных окружения
-"""
-
 import os
 from dotenv import load_dotenv
 
+# Загружаем переменные из .env файла
 load_dotenv()
 
-print("🔍 Проверка переменных окружения:")
-print(f"BOT_TOKEN: {'✅ установлен' if os.getenv('BOT_TOKEN') else '❌ отсутствует'}")
-print(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL', '❌ не установлен')}")
-print(f"PORT: {os.environ.get('PORT', '❌ не установлен')}")
+# Получаем значения
+bot_token = os.getenv('BOT_TOKEN')
+channel_username = os.getenv('CHANNEL_USERNAME')
 
-if os.getenv('BOT_TOKEN'):
-    token = os.getenv('BOT_TOKEN')
-    print(f"Токен (первые 10 символов): {token[:10]}...")
+print("🔍 Проверка переменных окружения:")
+print(f"BOT_TOKEN: {bot_token}")
+print(f"CHANNEL_USERNAME: {channel_username}")
+
+if bot_token:
+    print("✅ Токен бота загружен успешно!")
 else:
-    print("❌ BOT_TOKEN не найден! Добавьте его в переменные окружения Render.") 
+    print("❌ Токен бота не найден!")
+
+if channel_username:
+    print("✅ Имя канала загружено успешно!")
+else:
+    print("❌ Имя канала не найдено!") 

@@ -1,62 +1,108 @@
 #!/usr/bin/env python3
 """
-Тестирование бота через API
+Тестовый скрипт для проверки работы Fitness Content Sorter Bot
 """
 
-import requests
+import asyncio
+import logging
+from config import BOT_TOKEN, CHANNEL_USERNAME
+from database import Database
+from content_analyzer import ContentAnalyzer
 
-def test_bot():
-    """Тестирование бота"""
-    token = "8207363649:AAGRhGrlXsRi3tkP5oZCs0ncIeOUDNwR1fo"
-    
-    # Проверяем информацию о боте
-    url = f"https://api.telegram.org/bot{token}/getMe"
-    
-    try:
-        response = requests.get(url)
-        data = response.json()
-        
-        if data['ok']:
-            bot_info = data['result']
-            print(f"🤖 Бот: {bot_info['first_name']}")
-            print(f"   Username: @{bot_info['username']}")
-            print(f"   ID: {bot_info['id']}")
-            print("✅ Бот доступен!")
-        else:
-            print(f"❌ Ошибка: {data['description']}")
-            
-    except Exception as e:
-        print(f"❌ Ошибка при проверке бота: {e}")
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-def test_webhook():
-    """Тестирование webhook"""
-    token = "8207363649:AAGRhGrlXsRi3tkP5oZCs0ncIeOUDNwR1fo"
+async def test_bot_functionality():
+    """Тестирование основных функций бота"""
     
-    url = f"https://api.telegram.org/bot{token}/getWebhookInfo"
+    print("🧪 Тестирование Fitness Content Sorter Bot...")
     
-    try:
-        response = requests.get(url)
-        data = response.json()
-        
-        if data['ok']:
-            webhook_info = data['result']
-            print(f"\n🔗 Webhook URL: {webhook_info['url']}")
-            print(f"   Ошибка: {webhook_info['last_error_message']}")
-            print(f"   Ожидающие обновления: {webhook_info['pending_update_count']}")
-            
-            if webhook_info['url'] == "https://floodbot-pqmy.onrender.com/webhook":
-                print("✅ Webhook настроен правильно!")
-            else:
-                print("❌ Webhook настроен неправильно!")
-        else:
-            print(f"❌ Ошибка webhook: {data['description']}")
-            
-    except Exception as e:
-        print(f"❌ Ошибка при проверке webhook: {e}")
+    # Инициализация компонентов
+    db = Database()
+    analyzer = ContentAnalyzer()
+    
+    # Тест 1: Проверка категоризации
+    print("\n📋 Тест 1: Категоризация контента")
+    
+    test_cases = [
+        ("#челлендж Присоединяйтесь к нашему вызову!", "challenges"),
+        ("#результаты Мой новый рекорд!", "power_results"),
+        ("#советы Как правильно делать приседания", "sport_tips"),
+        ("#упражнения Техника приседаний", "exercises"),
+        ("#мемы Забавная ситуация в зале", "memes"),
+        ("Обычный пост без хештегов", "other")
+    ]
+    
+    for text, expected_category in test_cases:
+        category = analyzer.categorize_content(text)
+        category_name = analyzer.get_category_name(category)
+        status = "✅" if category == expected_category else "❌"
+        print(f"{status} '{text[:30]}...' → {category_name}")
+    
+    # Тест 2: Проверка базы данных
+    print("\n🗄️ Тест 2: База данных")
+    
+    # Добавляем тестовые данные
+    test_data = [
+        (1, -100123456789, "challenges", "Челлендж дня", "Присоединяйтесь к вызову #челлендж", None, None),
+        (2, -100123456789, "power_results", "Мой рекорд", "Новый рекорд в жиме #результаты", None, None),
+        (3, -100123456789, "sport_tips", "Совет по технике", "Правильная техника приседаний #советы", None, None),
+        (4, -100123456789, "exercises", "Упражнение дня", "Техника выполнения #упражнения", None, None),
+        (5, -100123456789, "memes", "Мем из зала", "Забавная ситуация #мемы", None, None),
+    ]
+    
+    for data in test_data:
+        success = db.add_content(*data)
+        print(f"{'✅' if success else '❌'} Добавление записи {data[0]}")
+    
+    # Проверяем статистику
+    stats = db.get_stats()
+    print(f"📊 Статистика: {len(stats)} категорий")
+    for category, count in stats.items():
+        category_name = analyzer.get_category_name(category)
+        print(f"  {category_name}: {count}")
+    
+    # Тест 3: Проверка поиска
+    print("\n🔍 Тест 3: Поиск контента")
+    
+    search_results = db.search_content("челлендж", limit=5)
+    print(f"Найдено {len(search_results)} результатов по запросу 'челлендж'")
+    
+    # Тест 4: Проверка хештегов
+    print("\n🏷️ Тест 4: Хештеги")
+    
+    for category_key in ['challenges', 'power_results', 'sport_tips', 'exercises', 'memes']:
+        hashtags = analyzer.get_hashtags_for_category(category_key)
+        category_name = analyzer.get_category_name(category_key)
+        print(f"  {category_name}: {' '.join(hashtags)}")
+    
+    print("\n✅ Тестирование завершено!")
+
+def test_config():
+    """Проверка конфигурации"""
+    print("\n⚙️ Проверка конфигурации:")
+    
+    if BOT_TOKEN:
+        print("✅ BOT_TOKEN настроен")
+    else:
+        print("❌ BOT_TOKEN не найден")
+    
+    print(f"📢 Канал: {CHANNEL_USERNAME}")
+    
+    from config import CATEGORIES, CATEGORY_KEYWORDS, CATEGORY_HASHTAGS
+    print(f"📂 Категорий: {len(CATEGORIES)}")
+    print(f"🔑 Ключевых слов: {len(CATEGORY_KEYWORDS)}")
+    print(f"🏷️ Хештегов: {len(CATEGORY_HASHTAGS)}")
 
 if __name__ == "__main__":
-    print("🧪 Тестирование бота")
-    print("=" * 30)
+    print("🚀 Запуск тестов Fitness Content Sorter Bot")
     
-    test_bot()
-    test_webhook() 
+    # Проверка конфигурации
+    test_config()
+    
+    # Запуск асинхронных тестов
+    asyncio.run(test_bot_functionality()) 
