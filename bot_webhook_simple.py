@@ -99,17 +99,14 @@ class ContentBot:
         else:
             await message.reply_text("❌ Ошибка добавления")
 
-# Глобальные переменные
+# Глобальная переменная для бота
 bot = None
-loop = None
 
 def init_bot():
     """Инициализация бота"""
-    global bot, loop
+    global bot
     try:
         bot = ContentBot()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         logger.info("✅ Бот успешно инициализирован")
         return True
     except Exception as e:
@@ -135,21 +132,6 @@ async def setup_webhook(webhook_url):
         logger.error(f"❌ Ошибка установки webhook: {e}")
         return False
 
-def process_update_sync(update):
-    """Синхронная обработка обновления"""
-    try:
-        # Используем существующий event loop
-        if loop and not loop.is_closed():
-            future = asyncio.run_coroutine_threadsafe(
-                bot.application.process_update(update), loop
-            )
-            future.result(timeout=30)  # Ждем максимум 30 секунд
-            logger.info("✅ Обновление обработано успешно")
-        else:
-            logger.error("❌ Event loop недоступен")
-    except Exception as e:
-        logger.error(f"❌ Ошибка обработки обновления: {e}")
-
 @app.route('/')
 def home():
     if bot:
@@ -172,8 +154,20 @@ def webhook():
     try:
         update = Update.de_json(request.get_json(), bot.application.bot)
         
-        # Обрабатываем обновление синхронно
-        process_update_sync(update)
+        # Создаем новый event loop для каждого запроса
+        def run_in_loop():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(bot.application.process_update(update))
+                logger.info("✅ Обновление обработано успешно")
+            finally:
+                loop.close()
+        
+        import threading
+        thread = threading.Thread(target=run_in_loop)
+        thread.start()
+        thread.join(timeout=30)  # Ждем максимум 30 секунд
         
         return jsonify({"status": "ok"})
     except Exception as e:
@@ -194,8 +188,7 @@ def setup():
         "bot_token": "установлен" if os.getenv('BOT_TOKEN') else "отсутствует",
         "webhook_url": os.getenv('WEBHOOK_URL', 'не установлен'),
         "port": os.environ.get('PORT', 'не установлен'),
-        "bot_initialized": bot is not None,
-        "event_loop": "активен" if loop and not loop.is_closed() else "неактивен"
+        "bot_initialized": bot is not None
     })
 
 def main():
@@ -226,5 +219,4 @@ def main():
     app.run(host='0.0.0.0', port=port, debug=False)
 
 if __name__ == '__main__':
-    main()
- 
+    main() 
