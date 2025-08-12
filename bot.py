@@ -23,6 +23,19 @@ class ContentBot:
         self.analyzer = ContentAnalyzer()
         self.application = Application.builder().token(BOT_TOKEN).build()
         self.setup_handlers()
+        # Запуск периодического keep-alive задания
+        self.application.create_task(self.keep_alive())
+
+    async def keep_alive(self):
+        """Периодически отправляет запрос к Telegram API чтобы бот не "засыпал" на Render"""
+        while True:
+            try:
+                # Отправляем запрос getMe (можно заменить на любой другой безопасный запрос)
+                await self.application.bot.get_me()
+                logging.info("Keep-alive: getMe запрос отправлен")
+            except Exception as e:
+                logging.error(f"Keep-alive error: {e}")
+            await asyncio.sleep(20)  # интервал между запросами (например, 20 секунд)
     
     def setup_handlers(self):
         """Настройка обработчиков команд и сообщений"""
