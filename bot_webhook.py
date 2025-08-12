@@ -128,6 +128,14 @@ async def setup_webhook(webhook_url):
         logger.error(f"❌ Ошибка установки webhook: {e}")
         return False
 
+async def process_update_async(update):
+    """Асинхронная обработка обновления"""
+    try:
+        await bot.application.process_update(update)
+        logger.info("✅ Обновление обработано успешно")
+    except Exception as e:
+        logger.error(f"❌ Ошибка обработки обновления: {e}")
+
 @app.route('/')
 def home():
     if bot:
@@ -149,7 +157,15 @@ def webhook():
     
     try:
         update = Update.de_json(request.get_json(), bot.application.bot)
-        bot.application.process_update(update)
+        
+        # Запускаем асинхронную обработку в отдельном потоке
+        def run_async():
+            asyncio.run(process_update_async(update))
+        
+        import threading
+        thread = threading.Thread(target=run_async)
+        thread.start()
+        
         return jsonify({"status": "ok"})
     except Exception as e:
         logger.error(f"Ошибка в webhook: {e}")
