@@ -18,7 +18,7 @@ class ContentBot:
     def __init__(self):
         self.token = os.getenv('BOT_TOKEN')
         if not self.token:
-            raise ValueError("BOT_TOKEN не найден")
+            raise ValueError("BOT_TOKEN не найден в переменных окружения")
         
         self.db = Database()
         self.analyzer = ContentAnalyzer()
@@ -98,35 +98,96 @@ class ContentBot:
         else:
             await message.reply_text("❌ Ошибка добавления")
 
-bot = ContentBot()
+# Глобальная переменная для бота
+bot = None
+
+def init_bot():
+    """Инициализация бота"""
+    global bot
+    try:
+        bot = ContentBot()
+        logger.info("✅ Бот успешно инициализирован")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации бота: {e}")
+        return False
 
 @app.route('/')
 def home():
-    return jsonify({"status": "running", "bot": "FloodBot"})
+    if bot:
+        return jsonify({
+            "status": "running", 
+            "bot": "FloodBot",
+            "webhook_url": os.getenv('WEBHOOK_URL', 'не установлен')
+        })
+    else:
+        return jsonify({
+            "status": "error",
+            "message": "Бот не инициализирован"
+        }), 500
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    if not bot:
+        return jsonify({"status": "error", "message": "Бот не инициализирован"}), 500
+    
     try:
         update = Update.de_json(request.get_json(), bot.application.bot)
         bot.application.process_update(update)
         return jsonify({"status": "ok"})
     except Exception as e:
         logger.error(f"Ошибка в webhook: {e}")
-        return jsonify({"status": "error"}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy"})
+    if bot:
+        return jsonify({"status": "healthy", "bot": "initialized"})
+    else:
+        return jsonify({"status": "unhealthy", "bot": "not initialized"}), 500
+
+@app.route('/setup')
+def setup():
+    """Страница для проверки настроек"""
+    return jsonify({
+        "bot_token": "установлен" if os.getenv('BOT_TOKEN') else "отсутствует",
+        "webhook_url": os.getenv('WEBHOOK_URL', 'не установлен'),
+        "port": os.environ.get('PORT', 'не установлен'),
+        "bot_initialized": bot is not None
+    })
 
 def main():
+    """Основная функция"""
     port = int(os.environ.get('PORT', 5000))
     webhook_url = os.getenv('WEBHOOK_URL')
     
-    if webhook_url:
-        bot.application.bot.set_webhook(url=f"{webhook_url}/webhook")
-        logger.info(f"Webhook установлен: {webhook_url}/webhook")
+    logger.info(f"🚀 Запуск FloodBot webhook версии...")
+    logger.info(f"📡 Порт: {port}")
+    logger.info(f"🌐 Webhook URL: {webhook_url}")
     
+    # Инициализируем бота
+    if not init_bot():
+        logger.error("❌ Не удалось инициализировать бота, завершение работы")
+        return
+    
+    if webhook_url:
+        try:
+            # Удаляем старый webhook перед установкой нового
+            bot.application.bot.delete_webhook()
+            logger.info("🗑️ Старый webhook удален")
+            
+            # Устанавливаем новый webhook
+            bot.application.bot.set_webhook(url=f"{webhook_url}/webhook")
+            logger.info(f"✅ Webhook установлен: {webhook_url}/webhook")
+        except Exception as e:
+            logger.error(f"❌ Ошибка установки webhook: {e}")
+    else:
+        logger.warning("⚠️ WEBHOOK_URL не установлен")
+    
+    # Запускаем Flask приложение
+    logger.info(f"🌐 Запуск Flask сервера на порту {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
 
 if __name__ == '__main__':
     main()
+ 
