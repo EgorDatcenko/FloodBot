@@ -116,6 +116,10 @@ def init_bot():
 async def setup_webhook(webhook_url):
     """Настройка webhook"""
     try:
+        # Инициализируем приложение
+        await bot.application.initialize()
+        logger.info("✅ Приложение инициализировано")
+        
         # Удаляем старый webhook
         await bot.application.bot.delete_webhook()
         logger.info("🗑️ Старый webhook удален")
