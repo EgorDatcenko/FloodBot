@@ -23,45 +23,77 @@ class ContentBot:
         self.analyzer = ContentAnalyzer()
         self.application = Application.builder().token(BOT_TOKEN).build()
         self.setup_handlers()
-        # Запуск периодического keep-alive задания
-        self.application.create_task(self.keep_alive())
+        # запуск keep_alive через post_init
+        self.application.post_init = self.start_keep_alive
+
+    async def start_keep_alive(self, app: Application):
+        """Запуск фоновой задачи keep_alive после инициализации приложения"""
+        app.create_task(self.keep_alive())
 
     async def keep_alive(self):
-        """Периодически отправляет запрос к Telegram API чтобы бот не "засыпал" на Render"""
+        """Периодически отправляет запрос к Telegram API чтобы бот не 'засыпал' на Render"""
         while True:
             try:
-                # Отправляем запрос getMe (можно заменить на любой другой безопасный запрос)
                 await self.application.bot.get_me()
-                logging.info("Keep-alive: getMe запрос отправлен")
+                logger.info("Keep-alive: getMe запрос отправлен")
             except Exception as e:
-                logging.error(f"Keep-alive error: {e}")
-            await asyncio.sleep(20)  # интервал между запросами (например, 20 секунд)
-    
+                logger.error(f"Keep-alive error: {e}")
+            await asyncio.sleep(20)  # интервал между запросами
+
     def setup_handlers(self):
         """Настройка обработчиков команд и сообщений"""
-        # Команды - оставляем только /start
         self.application.add_handler(CommandHandler("start", self.start_command))
-        
-        # Обработка inline кнопок
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
-        
-        # Обработка текстовых сообщений (для меню)
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.text_message_handler))
-        
-        # Обработка сообщений из канала
         self.application.add_handler(MessageHandler(filters.ChatType.CHANNEL, self.channel_message_handler))
-        
-        # Обработка пересланных сообщений из канала в ЛС боту
         self.application.add_handler(MessageHandler(filters.FORWARDED & filters.ChatType.PRIVATE, self.forwarded_message_handler))
-        
-        # Обработка ошибок
         self.application.add_error_handler(self.error_handler)
-    
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик команды /start"""
         welcome_text = """
 🏋️‍♂️ Добро пожаловать в Fitness Content Sorter Bot!
 
+Этот бот автоматически сортирует контент из каналов @nikitaFlooDed и Флудские ТРЕНИ по категориям.
+
+📋 Выберите категорию из меню ниже:
+        """
+        keyboard = self.create_main_keyboard()
+        await update.message.reply_text(welcome_text, reply_markup=keyboard)
+        await update.message.reply_text("🔄 Загружаю посты из каналов...")
+        await self.auto_load_new_posts()
+        self.db.update_all_stats()
+        total_posts = self.db.get_total_posts_count()
+        await update.message.reply_text(
+            f"✅ Загрузка завершена!\n\n"
+            f"📊 Всего постов в базе: {total_posts}\n\n"
+            f"💡 Используйте кнопки меню для просмотра категорий!"
+        )
+
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработчик нажатий на inline кнопки"""
+        query = update.callback_query
+        await query.answer()
+        data = query.data
+        if data.startswith("category_"):
+            category = data.replace("category_", "")
+            await self.show_category_content(query, category)
+        elif data == "stats":
+            self.db.update_all_stats()
+            stats = self.db.get_real_stats()
+            total_posts = self.db.get_total_posts_count()
+            if not stats:
+                await query.edit_message_text("📊 Статистика пока недоступна.")
+                return
+            stats_text = "📊 Статистика по категориям:\n\n"
+            for category, count in stats.items():
+                category_name = self.analyzer.get_category_name(category)
+                stats_text += f"📁 {category_name}: {count} постов\n"
+            stats_text += f"\n📈 Всего постов: {total_posts}"
+            await query.edit_message_text(stats_text)
+        elif data == "back_to_main":
+            welcome_text = """
+🏋️‍♂️ Добро пожаловать в Fitness Content Sorter Bot!
 Этот бот автоматически сортирует контент из каналов @nikitaFlooDed и Флудские ТРЕНИ по категориям.
 
 📋 Выберите категорию из меню ниже:
