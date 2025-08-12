@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import logging
+import asyncio
 from flask import Flask, request, jsonify
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -112,6 +113,21 @@ def init_bot():
         logger.error(f"❌ Ошибка инициализации бота: {e}")
         return False
 
+async def setup_webhook(webhook_url):
+    """Настройка webhook"""
+    try:
+        # Удаляем старый webhook
+        await bot.application.bot.delete_webhook()
+        logger.info("🗑️ Старый webhook удален")
+        
+        # Устанавливаем новый webhook
+        await bot.application.bot.set_webhook(url=f"{webhook_url}/webhook")
+        logger.info(f"✅ Webhook установлен: {webhook_url}/webhook")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Ошибка установки webhook: {e}")
+        return False
+
 @app.route('/')
 def home():
     if bot:
@@ -171,16 +187,11 @@ def main():
         return
     
     if webhook_url:
+        # Настраиваем webhook асинхронно
         try:
-            # Удаляем старый webhook перед установкой нового
-            bot.application.bot.delete_webhook()
-            logger.info("🗑️ Старый webhook удален")
-            
-            # Устанавливаем новый webhook
-            bot.application.bot.set_webhook(url=f"{webhook_url}/webhook")
-            logger.info(f"✅ Webhook установлен: {webhook_url}/webhook")
+            asyncio.run(setup_webhook(webhook_url))
         except Exception as e:
-            logger.error(f"❌ Ошибка установки webhook: {e}")
+            logger.error(f"❌ Ошибка настройки webhook: {e}")
     else:
         logger.warning("⚠️ WEBHOOK_URL не установлен")
     
